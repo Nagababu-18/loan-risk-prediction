@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block body %}
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Loan Risk Prediction</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    body {
+      font-family: "Inter", sans-serif;
+    }
+    .bg-hero {
+      background-image: url("https://images.pexels.com/photos/747113/pexels-photo-747113.jpeg");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen bg-hero bg-opacity-10">
+  <div class="absolute inset-0 bg-black bg-opacity-40 z-0"></div>
+
+  <div class="flex flex-col items-center pt-20 relative z-10">
+    <h1 class="text-3xl text-white font-bold mb-8">Welcome, {{ username }}</h1>
+
+    <div class="flex flex-wrap justify-center gap-8 w-full px-8">
+      <!-- LEFT: Prediction Form -->
+      <div class="bg-white bg-opacity-95 rounded-xl shadow-xl p-8 w-full max-w-2xl">
+        <h2 class="text-2xl font-semibold text-gray-800 mb-6">Loan Risk Prediction Form</h2>
+
+        <form method="POST" action="{{ url_for('dashboard') }}" class="grid grid-cols-2 gap-4">
+          <input type="number" name="income" placeholder="Income" class="form-input" required />
+          <input type="number" name="coapplicant_income" placeholder="Co-applicant Income" class="form-input" required />
+          <input type="number" name="loan_amount" placeholder="Loan Amount" class="form-input" required />
+          <input type="number" name="loan_term" placeholder="Loan Term (days)" class="form-input" required />
+          <input type="number" name="credit_score" placeholder="Credit Score" class="form-input" required />
+          <input type="number" name="dependents" placeholder="Dependents" class="form-input" required />
+
+          <select name="gender" class="form-select"><option value="0">Female</option><option value="1">Male</option></select>
+          <select name="married" class="form-select"><option value="0">Not Married</option><option value="1">Married</option></select>
+          <select name="education" class="form-select"><option value="0">Not Graduate</option><option value="1">Graduate</option></select>
+          <select name="self_employed" class="form-select"><option value="0">No</option><option value="1">Yes</option></select>
+          <select name="property_area" class="form-select col-span-2">
+            <option value="0">Rural</option>
+            <option value="1">Semiurban</option>
+            <option value="2">Urban</option>
+          </select>
+
+          <button type="submit" class="col-span-2 mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold">
+            Predict
+          </button>
+        </form>
+
+        {% if show_result %}
+        <div class="mt-6 text-center">
+          <h3 class="text-xl font-bold {% if 'Approved' in prediction_text %}text-green-600{% else %}text-red-600{% endif %}">
+            {{ prediction_text }}
+          </h3>
+        </div>
+
+        <div id="pieChart" class="mt-6 w-full"></div>
+
+        <script>
+          const chartData = [{
+            type: 'pie',
+            labels: ['Approved', 'Rejected'],
+            values: [{{ approval_percent }}, {{ rejection_percent }}],
+            marker: { colors: ['#28a745', '#dc3545'] },
+            textinfo: 'label+percent'
+          }];
+          const layout = { title: 'Approval vs Rejection Rate', height: 400, width: 400 };
+          Plotly.newPlot('pieChart', chartData, layout);
+        </script>
+
+        {% if rejection_reason %}
+        <div class="mt-4 p-4 bg-yellow-100 text-yellow-800 rounded shadow">{{ rejection_reason }}</div>
+        <div class="mt-2 p-4 bg-blue-100 text-blue-800 rounded shadow">{{ improvement_tip }}</div>
+        <div class="mt-2 p-4 bg-gray-100 text-gray-800 rounded shadow">{{ estimated_time }}</div>
+        {% endif %}
+        {% endif %}
+      </div>
+
+      <!-- RIGHT: Bank Info -->
+      <div class="bg-white bg-opacity-95 rounded-lg shadow-lg p-4 w-full max-w-xs">
+        <h3 class="text-lg font-bold text-center mb-3">Select Bank</h3>
+
+        <select id="bank_name" class="form-select w-full mb-3" onchange="showBankInfo(this.value)">
+          <option value="">-- Choose --</option>
+          <option value="sbi">State Bank of India (SBI)</option>
+          <option value="hdfc">HDFC Bank</option>
+          <option value="icici">ICICI Bank</option>
+          <option value="axis">Axis Bank</option>
+          <option value="pnb">Punjab National Bank (PNB)</option>
+        </select>
+
+        <div id="bank-instructions" class="hidden bg-gray-50 p-3 rounded text-sm">
+          <h4 class="font-semibold mb-2">Instructions:</h4>
+          <ul id="bank-points" class="list-disc pl-5 space-y-1"></ul>
+        </div>
+      </div>
+    </div>
+
+    <a href="{{ url_for('logout') }}" class="mt-6 text-white underline">Logout</a>
+  </div>
+
+  <script>
+    function showBankInfo(bank) {
+      const infoBox = document.getElementById("bank-instructions");
+      const list = document.getElementById("bank-points");
+
+      const bankInfo = {
+        sbi: ["Loan up to ₹50L for salaried.", "Interest starts at 8.4%", "Min CIBIL: 650"],
+        hdfc: ["Fast disbursal within 2 days", "Income min ₹25K", "Pre-approved loans available"],
+        icici: ["CIBIL > 700 preferred", "Long tenures available", "Balance transfer allowed"],
+        axis: ["Easy for salaried", "Minimal documents", "Custom EMI options"],
+        pnb: ["Govt employees get lower rate", "EMI starts ₹1000/lakh", "Quick approval"]
+      };
+
+      if (bankInfo[bank]) {
+        list.innerHTML = "";
+        bankInfo[bank].forEach(point => {
+          const li = document.createElement("li");
+          li.textContent = point;
+          list.appendChild(li);
+        });
+        infoBox.classList.remove("hidden");
+      } else {
+        infoBox.classList.add("hidden");
+      }
+    }
+  </script>
+</body>
+{% endblock %}

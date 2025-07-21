@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+  <h2 class="text-center mb-4">📊 Loan Risk Prediction</h2>
+
+  <!-- Show form only if prediction not done -->
+  {% if not show_result %}
+  <form method="POST" action="{{ url_for('predict') }}" class="row g-3">
+    <div class="col-md-6">
+      <input type="number" name="income" class="form-control" placeholder="Applicant Income" required>
+    </div>
+    <div class="col-md-6">
+      <input type="number" name="coapplicant_income" class="form-control" placeholder="Co-applicant Income" required>
+    </div>
+    <div class="col-md-6">
+      <input type="number" name="loan_amount" class="form-control" placeholder="Loan Amount" required>
+    </div>
+    <div class="col-md-6">
+      <input type="number" name="loan_term" class="form-control" placeholder="Loan Term (days)" required>
+    </div>
+    <div class="col-md-6">
+      <input type="number" name="credit_score" class="form-control" placeholder="Credit Score" required>
+    </div>
+    <div class="col-md-6">
+      <input type="number" name="dependents" class="form-control" placeholder="Number of Dependents" required>
+    </div>
+    <div class="col-md-6">
+      <select name="gender" class="form-select">
+        <option value="1">Male</option>
+        <option value="0">Female</option>
+      </select>
+    </div>
+    <div class="col-md-6">
+      <select name="married" class="form-select">
+        <option value="1">Married</option>
+        <option value="0">Not Married</option>
+      </select>
+    </div>
+    <div class="col-md-6">
+      <select name="education" class="form-select">
+        <option value="1">Graduate</option>
+        <option value="0">Not Graduate</option>
+      </select>
+    </div>
+    <div class="col-md-6">
+      <select name="self_employed" class="form-select">
+        <option value="1">Yes</option>
+        <option value="0">No</option>
+      </select>
+    </div>
+    <div class="col-md-6">
+      <select name="property_area" class="form-select">
+        <option value="0">Rural</option>
+        <option value="1">Semiurban</option>
+        <option value="2">Urban</option>
+      </select>
+    </div>
+
+    <div class="col-12 text-center">
+      <button type="submit" class="btn btn-primary px-5">Predict</button>
+    </div>
+  </form>
+  {% endif %}
+
+  <!-- Show result after prediction -->
+  {% if show_result %}
+    <div class="mt-5 text-center">
+      <h4 class="{% if 'Approved' in prediction_text %}text-success{% else %}text-danger{% endif %}">
+        {{ prediction_text }}
+      </h4>
+    </div>
+
+    <div id="pieChart" class="mt-4" style="height:400px;"></div>
+
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script>
+      const chartData = [{
+        type: 'pie',
+        labels: ['Approved', 'Rejected'],
+        values: [{{ approval_percent }}, {{ rejection_percent }}],
+        marker: { colors: ['#28a745', '#dc3545'] },
+        textinfo: 'label+percent'
+      }];
+      const layout = {
+        title: 'Approval vs Rejection Rate',
+        height: 400,
+        width: 400
+      };
+      Plotly.newPlot('pieChart', chartData, layout);
+    </script>
+
+    {% if rejection_reason %}
+      <div class="alert alert-warning mt-4">
+        <strong>Reason for Rejection:</strong> {{ rejection_reason }}
+      </div>
+      <div class="alert alert-info">
+        <strong>How to Improve:</strong> {{ improvement_tip }}
+      </div>
+      <div class="alert alert-secondary">
+        <strong>Estimated Time to Improve:</strong> {{ estimated_time }}
+      </div>
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}
